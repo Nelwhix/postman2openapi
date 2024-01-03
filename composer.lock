@@ -1,0 +1,95 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "deea76c28e5faeff76689d8414b013ab",
+    "packages": [
+        {
+            "name": "cerbero/json-parser",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cerbero90/json-parser.git",
+                "reference": "fa28a52d76ceff3b7f5f3c47c348d2ef6bf0f926"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cerbero90/json-parser/zipball/fa28a52d76ceff3b7f5f3c47c348d2ef6bf0f926",
+                "reference": "fa28a52d76ceff3b7f5f3c47c348d2ef6bf0f926",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "guzzlehttp/guzzle": "^7.2",
+                "illuminate/http": ">=6.20",
+                "mockery/mockery": "^1.5",
+                "pestphp/pest": "^2.0",
+                "phpstan/phpstan": "^1.9",
+                "scrutinizer/ocular": "^1.8",
+                "squizlabs/php_codesniffer": "^3.0"
+            },
+            "suggest": {
+                "guzzlehttp/guzzle": "Required to load JSON from endpoints (^7.2)."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "helpers.php"
+                ],
+                "psr-4": {
+                    "Cerbero\\JsonParser\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrea Marco Sartori",
+                    "email": "andrea.marco.sartori@gmail.com",
+                    "homepage": "https://github.com/cerbero90",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Zero-dependencies pull parser to read large JSON from any source in a memory-efficient way.",
+            "homepage": "https://github.com/cerbero90/json-parser",
+            "keywords": [
+                "json",
+                "json-parser",
+                "lexer",
+                "memory",
+                "parser"
+            ],
+            "support": {
+                "issues": "https://github.com/cerbero90/json-parser/issues",
+                "source": "https://github.com/cerbero90/json-parser/tree/1.1.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/cerbero90",
+                    "type": "github"
+                }
+            ],
+            "time": "2023-08-06T15:38:50+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.6.0"
+}
