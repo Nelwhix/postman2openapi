@@ -6,12 +6,12 @@ class Url
 {
     private ?string $raw;
     public ?array $path;
-    private ?string $query;
+    public ?string $query;
     public ?string $protocol;
     public ?string $host;
     public ?string $port;
     public ?bool $valid;
-    private ?array $pathVars;
+    public ?array $pathVars;
 
     public function __construct(?string $fixedUrl = null) {
         $this->raw = null;

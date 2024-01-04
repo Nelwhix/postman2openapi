@@ -44,13 +44,35 @@ class Postman2OpenApi
                       $summary,
                       ...($description ? [ $description ] : []),
                         ...self::parseBody($element['body'], $element['method']),
-                        ...parseOperationAuth(auth, securitySchemes, optsAuth),
-                        ...parseParameters(query, header, joinedPath, paramsMeta, pathVars, disabledParams),
-                        ...parseResponse(response, events, responseHeaders)
+                        ...self::parseParameters($urlObj->query, $element['header'], $joinedPath, $urlObj->pathVars),
                     ];
                 }
             }
         }
+    }
+
+    /* Parse the Postman query and header and transform into OpenApi parameters */
+    private static function parseParameters(string $query, string $header, string $joinedPath, array $pathVars): array {
+        $disabledParams = [
+            'includeQuery' => false,
+            'includeHeader' => false,
+        ];
+    }
+
+    /* calculate the type of variable based on OPenApi types */
+    private static function inferType($value): string
+    {
+        if (preg_match('/^\d+$/', $value)) {
+            return 'integer';
+        }
+        if (preg_match('/^[+-]?([0-9]*[.])?[0-9]+$/', $value)) {
+            return 'number';
+        }
+        if (preg_match('/^(true|false)$/i', $value)) {
+            return 'boolean';
+        }
+        
+        return 'string';
     }
 
     private static function parseBody(string $method, array $body = []): array {
@@ -63,10 +85,110 @@ class Postman2OpenApi
         switch ($body['mode']) {
             case 'raw':
                 $example = '';
-                if ($body['options']['raw']['language'] === 'json') {
-                    if ($body[;])
+                $language = $body['options']['raw']['language'];
+                if ($language === 'json') {
+                    if ($body['options']['raw']) {
+                        $errors = [];
+                        $example = json_decode($body['options']['raw']);
+                    }
+                    $content = [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                $example,
+                            ]
+                        ]
+                    ];
+                } else if ($language === 'text') {
+                    $content = [
+                      'text/plain' => [
+                          'schema' => [
+                              'type' => 'string',
+                              'example' => $body['options']['raw']
+                          ]
+                      ]
+                    ];
                 }
+                else {
+                    $content = [
+                      '*/*' => [
+                          'schema' => [
+                              'type' => 'string',
+                              'example' => json_encode($body['options']['raw'])
+                          ]
+                      ]
+                    ];
+                }
+                break;
+            case 'file':
+                $content = [
+                    'text/plain' => []
+                ];
+                break;
+            case 'formdata':
+                $content = [
+                    'multipart/form-data' => self::parseFormData($body['formdata'])
+                ];
+                break;
+            case 'urlencoded':
+                $content = [
+                    'application/x-www-form-urlencoded' => self::parseFormData($body['urlencoded'])
+                ];
+                break;
         }
+
+        return [
+          'requestBody' => [
+              $content,
+          ]
+        ];
+    }
+
+    /** Parse the body for create a form data structure */
+    private static function parseFormData(array $data): array
+    {
+        $objectSchema = [
+            'schema' => [
+                'type' => 'object'
+            ]
+        ];
+
+        return array_reduce($data, function ($carry, $item) {
+            if (self::isRequired($item['description'])) {
+                $carry['schema']['required'] = $carry['schema']['required'] || [];
+                array_push($carry['schema']['required'], $item['key']);
+            }
+
+            $schemaProperties = $carry['schema']['properties'] ?? [];
+            $description = [];
+            if (isset($item['description'])) {
+                $description = [
+                  'description' => preg_replace('/ ?\[required] ?/i', '', $item['description']);
+                ];
+            }
+
+            $value = [];
+            if (isset($item['value'])) {
+                $value = [
+                    'example' => $item['value']
+                ];
+            }
+
+            $type = [];
+            if ($item['type'] === 'file') {
+                $type = [
+                    'format' => 'binary'
+                ];
+            }
+            $schemaProperties[$item['key']] = [
+                'type' => self::inferType($item['value']),
+                $description,
+                $value,
+                $type
+            ];
+
+            return $item;
+        }, $objectSchema);
     }
 
     /* From the path array compose the real path for OpenApi specs */
