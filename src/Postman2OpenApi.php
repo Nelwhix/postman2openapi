@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 
+namespace Nelwhix\Postman2openapi;
+
 use Cerbero\JsonParser\JsonParser;
+use Nelwhix\Postman2openapi\utils\Map;
 use types\Url;
 use utils\Set;
 
@@ -12,7 +15,7 @@ class Postman2OpenApi
         $tags = [];
         $securitySchemes = [];
         $items = JsonParser::parse($postmanSpec)->pointer(('/item'))->toArray();
-        $obj = new ArrayObject($items['item']);
+        $obj = new \ArrayObject($items['item']);
         $entries = $obj->getIterator();
 
         foreach ($entries as $i => $element) {
@@ -51,13 +54,28 @@ class Postman2OpenApi
         }
     }
 
+    private static function paramInserter($parameterMap, $param) {
+        if (!$parameterMap->has($param->name)) {
+            $parameterMap->set($param->name, $param);
+        }
+
+        return $parameterMap;
+    }
+
     /* Parse the Postman query and header and transform into OpenApi parameters */
-    private static function parseParameters(string $query, string $header, string $joinedPath, array $pathVars): array {
+    private static function parseParameters(string $query, array $header, string $joinedPath, array $pathVars): array {
         $disabledParams = [
             'includeQuery' => false,
             'includeHeader' => false,
         ];
+
+        $parameters = [
+            array_reduce($header, self::mapParameters('query', false, self::paramInserter), new Map())];
+        ];
     }
+
+    /* Accumulator function for different types of parameters */
+    private static function mapParameters($type, $includeDisabled, $paramInserter)
 
     /* calculate the type of variable based on OPenApi types */
     private static function inferType($value): string
