@@ -13,15 +13,35 @@ class Postman2OpenApi
       $openApiSpec = [
           'openapi' => '3.1.0'
       ];
-      $postmanJson = json_decode($postmanSpec);
+      $postmanJson = json_decode($postmanSpec, true);
 
       // parse info
-      self::parseInfo($postmanJson);
-
+      self::parseInfo($postmanJson, $openApiSpec);
+      return json_encode($openApiSpec);
       // loop through item array
   }
 
-  private static function parseInfo(array &$postmanJson): void {
+  private static function parseInfo(array $postmanJson, array &$openApiArray): void {
       $info = $postmanJson["info"];
+      $result = [
+          'title' => $info['name'],
+          'description' => $info['description']
+      ];
+
+      if (is_string($info['version'])) {
+          $result['version'] = $info['version'];
+      } else {
+          // parse postman versioning
+          $major = $info['version']['major'];
+          $minor = $info['version']['minor'];
+          $patch = $info['version']['patch'];
+          $result['version'] = sprintf('%s.%s.%s', $major, $minor, $patch);
+
+          if (isset($info['version']['identifier'])) {
+              $result['version'] .= sprintf("-%s", $info['version']['identifier']);
+          }
+      }
+
+      $openApiArray['info'] = $result;
   }
 }
