@@ -120,8 +120,10 @@ class Postman2OpenApi
 
        if (isset($item['request']['auth'])) {
            $key = $item['request']['auth']['type'] . "Auth";
-           $this->openApiSpec['paths'][$path]['security'] = [
-               $key => []
+           $this->openApiSpec['paths'][$path][$httpMethod][] = [
+               'security' => [
+                   $key => []
+               ]
            ];
        }
 
@@ -231,6 +233,18 @@ class Postman2OpenApi
                    ];
            }
        }
+
+       // parse responses
+      if (empty($item['response'])) {
+          $this->openApiSpec['paths'][$path][$httpMethod] = [
+              '200' => [
+                  'description' => ''
+              ]
+          ];
+      } else {
+
+      }
+
   }
 
   private function parseInfo(array $postmanJson): void {
