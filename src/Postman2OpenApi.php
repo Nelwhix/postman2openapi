@@ -52,7 +52,6 @@ class Postman2OpenApi
       if (isset($urlComponents['scheme'], $urlComponents['host'])) {
           // check if that server url already exists in the server block
           $serverUrl = $urlComponents['scheme'] . '://' . $urlComponents['host'];
-
           $this->setServer($serverUrl);
       }
 
@@ -68,15 +67,13 @@ class Postman2OpenApi
   }
 
   private function setServer(string $potentialServerUrl) {
-      foreach ((array)$this->openApiSpec['servers'] as $serverObj) {
-          if ($serverObj['url'] === $potentialServerUrl) {
-              return;
-          }
-      }
+        $existingUrls = array_column((array)$this->openApiSpec['servers'], 'url');
 
-      $this->openApiSpec['servers'][] = [
-          'url' => $potentialServerUrl
-      ];
+        if (!in_array($potentialServerUrl, $existingUrls)) {
+            $this->openApiSpec['servers'][] = [
+                'url' => $potentialServerUrl
+            ];
+        }
   }
 
   private function parsePaths(array $item, ?string $tag = null): void {
@@ -120,131 +117,133 @@ class Postman2OpenApi
 
        if (isset($item['request']['auth'])) {
            $key = $item['request']['auth']['type'] . "Auth";
-           $this->openApiSpec['paths'][$path][$httpMethod][] = [
-               'security' => [
-                   $key => []
-               ]
-           ];
+           $this->openApiSpec['paths'][$path][$httpMethod]['security'] =
+               [
+                   [
+                       $key => []
+                   ]
+               ];
        }
 
        if (isset($item['request']['header'])) {
-           foreach ($item['request']['header'] as $header) {
-               if (!array_key_exists('parameters', (array)$this->openApiSpec['paths'][$path])) {
-                   $this->openApiSpec['paths'][$path] = [
-                     'parameters' => [
-                         [
-                             'name' => $header['key'],
-                             'in' => 'header',
-                             'schema' => [
-                                 'type' => 'string',
-                                 'example' => $header['value']
-                             ]
-                         ]
-                     ]
-                   ];
-               } else {
-                   $this->openApiSpec['paths'][$path]['parameters'][] = [
-                       [
-                           'name' => $header['key'],
-                           'in' => 'header',
-                           'schema' => [
-                               'type' => 'string',
-                               'example' => $header['value']
-                           ]
-                       ]
-                   ];
-               }
-           }
+           $this->parseHeaders($item['request']['header'], $path, $httpMethod);
        }
 
        if (isset($item['request']['body'])) {
-           switch ($item['request']['body']['mode']) {
-               case 'raw':
-                   $this->openApiSpec['paths'][$path][] = [
-                       'requestBody' => [
-                           'content' => [
-                               'application/json' => [
-                                   'examples' => [
-                                       $item['name'] => [
-                                           'value' => $item['request']['body']['raw']
-                                       ]
-                                   ]
-                               ]
-                           ]
-                       ]
-                   ];
-               case 'urlencoded':
-                   $properties = [];
-                   $examples = [];
-                   foreach ($item['request']['body']['urlencoded'] as $formField) {
-                       $properties[] = [
-                           $formField['key'] => [
-                               'type' => 'string',
-                               'example' => $formField['value']
-                           ]
-                       ];
-
-                       if (!array_key_exists($item['name'], $examples)) {
-                           $examples[] = [
-                               $item['name'] => [
-                                   $formField['key'] => $formField['value']
-                               ]
-                           ];
-                       } else {
-                           $examples[$item['name']][] = [
-                               $formField['key'] => $formField['value']
-                           ];
-                       }
-                   }
-                   $this->openApiSpec['paths'][$path][] = [
-                       'requestBody' => [
-                           'content' => [
-                               'application/x-www-form-urlencoded' => [
-                                   'examples' => $examples,
-                                   'schema' => [
-                                       'type' => 'object',
-                                       'properties' => $properties,
-                                   ]
-                               ]
-                           ]
-                       ]
-                   ];
-               case 'formdata':
-                   $properties = [];
-                   foreach ($item['request']['body']['formdata'] as $formField) {
-                       $properties[] = [
-                           $formField['key'] => [
-                               'type' => 'string',
-                               'format' => 'binary'
-                           ]
-                       ];
-                   }
-                   $this->openApiSpec['paths'][$path][] = [
-                       'requestBody' => [
-                           'content' => [
-                               'multipart/form-data' => [
-                                   'schema' => [
-                                       'type' => 'object',
-                                       'properties' => $properties,
-                                   ]
-                               ]
-                           ]
-                       ]
-                   ];
-           }
+           $this->parseBody($item['request']['body'], $path, $httpMethod, $item['name']);
        }
 
-       // parse responses
-      if (empty($item['response'])) {
-          $this->openApiSpec['paths'][$path][$httpMethod] = [
-              '200' => [
-                  'description' => ''
-              ]
-          ];
-      } else {
+//       // parse responses
+//      if (empty($item['response'])) {
+//          $this->openApiSpec['paths'][$path][$httpMethod] = [
+//              '200' => [
+//                  'description' => ''
+//              ]
+//          ];
+//      } else {
+//
+//      }
 
+  }
+
+  private function parseBody(array $requestBody, string $path, string $httpMethod, string $operationName): void {
+      switch ($requestBody['mode']) {
+          case 'raw':
+              $this->openApiSpec['paths'][$path][$httpMethod]['requestBody'] = [
+                      'content' => [
+                          'application/json' => [
+                              'examples' => [
+                                  $operationName => [
+                                      'value' => $requestBody['raw']
+                                  ]
+                              ]
+                          ]
+                      ]
+              ];
+              break;
+          case 'urlencoded':
+              $properties = [];
+              $examples = [];
+              foreach ($requestBody['urlencoded'] as $formField) {
+                  $properties[] = [
+                      $formField['key'] => [
+                          'type' => 'string',
+                          'example' => $formField['value']
+                      ]
+                  ];
+
+                  if (!array_key_exists($operationName, $examples)) {
+                      $examples[] = [
+                          $operationName => [
+                              $formField['key'] => $formField['value']
+                          ]
+                      ];
+                  } else {
+                      $examples[$operationName][] = [
+                          $formField['key'] => $formField['value']
+                      ];
+                  }
+              }
+              $this->openApiSpec['paths'][$path][$httpMethod]['requestBody'] = [
+                      'content' => [
+                          'application/x-www-form-urlencoded' => [
+                              'examples' => $examples,
+                              'schema' => [
+                                  'type' => 'object',
+                                  'properties' => $properties,
+                              ]
+                          ]
+                      ]
+              ];
+              break;
+          case 'formdata':
+              $properties = [];
+              foreach ($requestBody['formdata'] as $formField) {
+                  $properties[] = [
+                      $formField['key'] => [
+                          'type' => 'string',
+                          'format' => 'binary'
+                      ]
+                  ];
+              }
+              $this->openApiSpec['paths'][$path][$httpMethod]['requestBody'] = [
+                      'content' => [
+                          'multipart/form-data' => [
+                              'schema' => [
+                                  'type' => 'object',
+                                  'properties' => $properties,
+                              ]
+                          ]
+                      ]
+              ];
+              break;
       }
+  }
 
+  private function parseHeaders(array $headers, string $path, string $httpMethod): void {
+      foreach ($headers as $header) {
+          if (!array_key_exists('parameters', (array)$this->openApiSpec['paths'][$path][$httpMethod])) {
+              $this->openApiSpec['paths'][$path][$httpMethod]['parameters'] = [
+                      [
+                          'name' => $header['key'],
+                          'in' => 'header',
+                          'schema' => [
+                              'type' => 'string',
+                              'example' => $header['value']
+                          ]
+                      ]
+              ];
+          } else {
+              $this->openApiSpec['paths'][$path][$httpMethod]['parameters'][] = [
+                      'name' => $header['key'],
+                      'in' => 'header',
+                      'schema' => [
+                          'type' => 'string',
+                          'example' => $header['value']
+                      ]
+                  ];
+          }
+      }
   }
 
   private function parseInfo(array $postmanJson): void {
@@ -271,6 +270,8 @@ class Postman2OpenApi
                   $result['version'] .= sprintf("-%s", $info['version']['identifier']);
               }
           }
+      } else {
+          $result['version'] = '1.0.0';
       }
 
       $this->openApiSpec['info'] = $result;
